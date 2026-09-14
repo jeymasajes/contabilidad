@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Surtecol - Registro de Factura de Compra</title>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --accent: #16a085;
+      --bg: #f5f6fa;
+      --border: #dcdde1;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    }
+    h2 {
+      color: var(--primary);
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    .section-title {
+      background: #eef2f3;
+      padding: 8px 12px;
+      font-weight: bold;
+      margin: 20px 0 10px 0;
+      border-left: 4px solid var(--accent);
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 15px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group label {
+      margin-bottom: 5px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    input, select, textarea {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: var(--accent);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      background-color: #f8f9fa;
+      color: var(--primary);
+    }
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background-color: #117a65;
+    }
+    .btn-search {
+      background-color: #34495e;
+    }
+    .btn-search:hover {
+      background-color: #2c3e50;
+    }
+    .btn-add {
+      background-color: #2980b9;
+      margin-top: 10px;
+    }
+    .btn-add:hover {
+      background-color: #1f618d;
+    }
+    .btn-danger {
+      background-color: #c0392b;
+      padding: 5px 10px;
+    }
+    .btn-danger:hover {
+      background-color: #962d22;
+    }
+    .btn-print {
+      background-color: #8e44ad;
+    }
+    .btn-print:hover {
+      background-color: #713391;
+    }
+    .kardex-link {
+      font-size: 11px;
+      color: #e67e22;
+      text-decoration: none;
+      margin-top: 3px;
+      font-weight: bold;
+    }
+    .kardex-link:hover {
+      text-decoration: underline;
+    }
+    .footer-surtecol {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: #7f8c8d;
+    }
+    .footer-surtecol img {
+      max-width: 110px;
+      margin-top: 10px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .total-box {
+      background-color: #fcfcfc;
+      border: 1px dashed var(--accent);
+      padding: 15px;
+      margin-top: 20px;
+      border-radius: 4px;
+    }
+    .input-btn-group {
+      display: flex;
+      gap: 5px;
+    }
+    .input-btn-group input {
+      flex: 1;
+    }
+    @media print {
+      body { background-color: #fff; padding: 0; }
+      .container { box-shadow: none; padding: 0; max-width: 100%; }
+      .btn, .btn-add, .btn-danger, .btn-search, .footer-surtecol, .section-actions, th:last-child, td:last-child { display: none !important; }
+      input, select, textarea { border: none !important; background: transparent !important; padding: 0 !important; font-size: 14px; color: #000; -webkit-appearance: none; }
+      .section-title { border-left: 4px solid #333; background: #ddd !important; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Gestión de Facturas de Compra</h2>
+   
+  <form id="compraForm">
+   
+    <div class="section-title">Información General del Egreso</div>
+    <div class="grid-3">
+      <div class="form-group">
+        <label for="noFactura">No. FACTURA *</label>
+        <div class="input-btn-group">
+          <input type="text" id="noFactura" required>
+          <button type="button" class="btn btn-search" onclick="buscarFacturaCompra()">Buscar</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="nit">NIT Proveedor *</label>
+        <input type="text" id="nit" onblur="autocompletarProveedor()" required>
+      </div>
+      <div class="form-group">
+        <label for="razonSocial">Razón Social *</label>
+        <input type="text" id="razonSocial" required>
+      </div>
+      <div class="form-group">
+        <label for="fecha">Fecha Factura *</label>
+        <input type="date" id="fecha" required>
+      </div>
+      <div class="form-group">
+        <label for="direccion">Dirección *</label>
+        <input type="text" id="direccion" required>
+      </div>
+      <div class="form-group">
+        <label for="ciudad">Ciudad *</label>
+        <input type="text" id="ciudad" required>
+      </div>
+      <div class="form-group">
+        <label for="correo">Correo Electrónico *</label>
+        <input type="email" id="correo" required>
+      </div>
+      <div class="form-group">
+        <label for="telefono">Teléfono *</label>
+        <input type="text" id="telefono" required>
+      </div>
+      <div class="form-group">
+        <label for="comprador">Comprador *</label>
+        <input type="text" id="comprador" required>
+      </div>
+    </div>
+ 
+    <div style="margin-top: 15px;" class="grid-3">
+      <div class="form-group" style="grid-column: span 2;">
+        <label for="descripcionGeneral">Descripción Resumen General *</label>
+        <input type="text" id="descripcionGeneral" placeholder="Ej: Compra de alimentos, papelería, etc." required>
+      </div>
+      <div class="form-group">
+        <label for="cuentaPuc">Cuenta PUC</label>
+        <input type="text" id="cuentaPuc" list="listaPuc" placeholder="Escriba o seleccione Cuenta...">
+      </div>
+    </div>
+ 
+    <div style="margin-top: 15px;" class="grid-3">
+      <div class="form-group">
+        <label for="archivoAdjunto">Adjuntar Factura (PDF / JPG)</label>
+        <input type="file" id="archivoAdjunto" accept=".pdf, .jpg, .jpeg, .png, .zip">
+        <span id="txtArchivoPrevio" style="font-size:12px; color:#2980b9; margin-top:5px; font-style:italic;"></span>
+      </div>
+    </div>
+ 
+    <div class="section-title">Detalle de Ítems (Alojados en pestaña DETALLE)</div>
+    <table id="tablaItems">
+      <thead>
+        <tr>
+          <th>Producto / Servicio *</th>
+          <th>Cantidad *</th>
+          <th>Valor Unitario *</th>
+          <th>Unidad Medida</th>
+          <th>% IVA</th>
+          <th>% IPO</th>
+          <th>Otros</th>
+          <th>¿Al Kardex?</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="bodyItems"></tbody>
+    </table>
+    <button type="button" class="btn btn-add" onclick="agregarFilaItem()">+ Agregar Ítems a la Factura</button>
+ 
+    <div class="section-title">Consolidado y Totales de la Factura (Pestaña EGRESOS)</div>
+    <div class="total-box grid-3">
+      <div class="form-group">
+        <label for="subtotalGeneral">Subtotal Consolidado</label>
+        <input type="number" id="subtotalGeneral" value="0" readonly>
+      </div>
+       
+      <input type="hidden" id="porcentajeIva" value="0">
+      <input type="hidden" id="porcentajeIpoconsumo" value="0">
+
+      <div class="form-group">
+        <label for="ivaGeneral">Valor Total IVA</label>
+        <input type="number" id="ivaGeneral" value="0" readonly>
+      </div>
+      <div class="form-group">
+        <label for="ipoconsumoGeneral">Valor Total IPOCONSUMO</label>
+        <input type="number" id="ipoconsumoGeneral" value="0" readonly>
+      </div>
+      <div class="form-group">
+        <label for="otrosDescuentos">Otros Descuentos / Cargos</label>
+        <input type="number" id="otrosDescuentos" value="0" step="0.01" oninput="calcularTotalesGenerales()">
+      </div>
+      <div class="form-group">
+        <label for="cantidadGeneral">Cantidad de Ítems</label>
+        <input type="number" id="cantidadGeneral" value="0" readonly>
+      </div>
+      <div class="form-group" style="grid-column: span 2;">
+        <label for="totalGeneral" style="color: var(--accent); font-size: 15px;">TOTAL FACTURA (Calculado)</label>
+        <input type="number" id="totalGeneral" value="0" style="font-weight: bold; border-color: var(--accent);" readonly>
+      </div>
+    </div>
+ 
+    <div style="margin-top: 25px; text-align: right;" class="section-actions">
+      <button type="button" class="btn btn-print" id="btnImprimir" onclick="window.print()" style="display:none; margin-right:10px;">Imprimir</button>
+      <button type="button" class="btn btn-danger" id="btnEliminar" onclick="eliminarFacturaCompra()" style="display:none; margin-right:10px;">Borrar Factura</button>
+      <button type="submit" class="btn" id="btnGuardar">Registrar Factura de Compra</button>
+    </div>
+  </form>
+ 
+  <div class="footer-surtecol">
+    <p>Este es un desarrollo creado por Surtecol<br>Tel.: +573188097131    |    email: surtecol@gmail.com   |   Colombia</p>
+    <img src="logo1.png" alt="Surtecol Logo">
+  </div>
+</div>
+
+<datalist id="listaProductos"></datalist>
+<datalist id="listaPuc"></datalist>
+ 
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpYG9qByjvcK06ShRLpS9QnLEvQyYnO4OmeilNl6JGT1-U24P27gGRtgKgtPjT0hKv/exec";
+  
+  let baseProductos = [];
+  let esModoEdicion = false;
+ 
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById('fecha').valueAsDate = new Date();
+    cargarListasIniciales();
+  });
+
+  function cargarListasIniciales() {
+    fetch(`${WEB_APP_URL}?action=getCompraInitData`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          const datalistPuc = document.getElementById("listaPuc");
+          datalistPuc.innerHTML = "";
+          res.data.puc.forEach(codigo => {
+            let opt = document.createElement("option");
+            opt.value = codigo;
+            datalistPuc.appendChild(opt);
+          });
+          
+          baseProductos = res.data.productos;
+          actualizarDatalistProductos();
+
+          if(!esModoEdicion) {
+            agregarFilaItem(); 
+          }
+        } else {
+          alert("Error cargando listas de configuración: " + res.error);
+        }
+      }).catch(err => console.error("Error inicializando datos: ", err));
+  }
+
+  function actualizarDatalistProductos() {
+    const datalist = document.getElementById("listaProductos");
+    if (!datalist) return;
+    datalist.innerHTML = "";
+    
+    baseProductos.forEach(p => {
+      let opt = document.createElement("option");
+      opt.value = p.descripcion;
+      opt.dataset.idUnico = p.idUnico;
+      datalist.appendChild(opt);
+    });
+
+    document.querySelectorAll(".item-prod").forEach(input => {
+      controlarCambioProducto(input);
+    });
+  }
+ 
+  function agregarFilaItem(valoresPredefinidos = null) {
+    const tbody = document.getElementById("bodyItems");
+    const tr = document.createElement("tr");
+    tr.className = "item-row";
+    
+    tr.innerHTML = `
+      <td>
+        <input type="text" list="listaProductos" class="item-prod" placeholder="Escriba o seleccione..." oninput="controlarCambioProducto(this)" style="width:170px;" required>
+        <div class="kardex-container"></div>
+      </td>
+      <td><input type="number" class="item-cant" value="1" min="0.1" step="any" oninput="calcularFila(this)" style="width:60px;" required></td>
+      <td><input type="number" class="item-val" value="0" min="0" step="any" oninput="calcularFila(this)" style="width:90px;" required></td>
+      <td><input type="text" class="item-unid" value="UNIDAD" style="width:70px;"></td>
+      <td><input type="number" class="item-piva" value="0" min="0" step="any" oninput="calcularFila(this)" style="width:45px;"></td>
+      <td><input type="number" class="item-pipo" value="0" min="0" step="any" oninput="calcularFila(this)" style="width:45px;"></td>
+      <td><input type="number" class="item-otros" value="0" min="0" step="any" oninput="calcularFila(this)" style="width:50px;"></td>
+      <td style="text-align:center;"><input type="checkbox" class="item-kardex" value="true"></td>
+      <td><button type="button" class="btn btn-danger" onclick="eliminarFilaItem(this)">X</button></td>
+      <input type="hidden" class="item-tot" value="0">
+      <input type="hidden" class="item-viva" value="0">
+      <input type="hidden" class="item-vipo" value="0">
+    `;
+    
+    tbody.appendChild(tr);
+    
+    if (valoresPredefinidos) {
+      tr.querySelector(".item-prod").value = valoresPredefinidos.descripcion || "";
+      tr.querySelector(".item-cant").value = valoresPredefinidos.cantidad || 1;
+      tr.querySelector(".item-val").value = valoresPredefinidos.valorUnitario || 0;
+      tr.querySelector(".item-unid").value = valoresPredefinidos.unidadMedida || "UNIDAD";
+      
+      const sub = valoresPredefinidos.cantidad * valoresPredefinidos.valorUnitario;
+      const pIva = sub > 0 ? ((valoresPredefinidos.ivaItem / sub) * 100).toFixed(1) : 0;
+      const pIpo = sub > 0 ? ((valoresPredefinidos.ipoconsumoItem / sub) * 100).toFixed(1) : 0;
+      
+      tr.querySelector(".item-piva").value = pIva;
+      tr.querySelector(".item-pipo").value = pIpo;
+      tr.querySelector(".item-otros").value = valoresPredefinidos.otrosItem || 0;
+      tr.querySelector(".item-kardex").checked = valoresPredefinidos.incluirKardex === true || valoresPredefinidos.incluirKardex === "true";
+    }
+
+    const nuevoInput = tr.querySelector(".item-prod");
+    controlarCambioProducto(nuevoInput);
+    calcularFila(nuevoInput);
+  }
+ 
+  function eliminarFilaItem(btn) {
+    const rows = document.querySelectorAll(".item-row");
+    if (rows.length > 1) {
+      btn.closest("tr").remove();
+      calcularTotalesGenerales();
+    } else {
+      alert("La factura debe tener al menos un ítem detallado.");
+    }
+  }
+
+  function controlarCambioProducto(input) {
+    const container = input.closest("td").querySelector(".kardex-container");
+    if (!container) return;
+
+    const valorDigitado = input.value.trim();
+    if (!baseProductos || baseProductos.length === 0) {
+      container.innerHTML = "";
+      return;
+    }
+
+    const productoExiste = baseProductos.find(p => p.descripcion.toLowerCase() === valorDigitado.toLowerCase());
+
+    if (valorDigitado === "") {
+      container.innerHTML = `<br><a href="javascript:void(0);" onclick="abrirCreadorProductos()" class="kardex-link" style="color: #e67e22;">¿No existe? Créalo aquí</a>`;
+    } else if (!productoExiste) {
+      container.innerHTML = `<span style="color: #7f8c8d; font-size: 11px; font-style: italic; display:block; margin-top:3px;">Item manual (No Kardex)</span>`;
+      const fila = input.closest("tr");
+      const checkKardex = fila.querySelector(".item-kardex");
+      if (checkKardex) checkKardex.checked = false;
+    } else {
+      container.innerHTML = `<span style="color: #16a085; font-size: 11px; font-weight: bold; display:block; margin-top:3px;">✓ Registrado [${productoExiste.idUnico}]</span>`;
+    }
+  }
+
+  function abrirCreadorProductos() {
+    const ancho = 850;
+    const alto = 600;
+    const izquierda = (screen.width - ancho) / 2;
+    const arriba = (screen.height - alto) / 2;
+    const nFactura = document.getElementById("noFactura").value.trim();
+    window.open(`productos.html?factura=${encodeURIComponent(nFactura)}`, "GestorProductos", `width=${ancho},height=${alto},top=${arriba},left=${izquierda},scrollbars=yes,resizable=yes`);
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.data === "refreshProductos") {
+      fetch(`${WEB_APP_URL}?action=getCompraInitData`)
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) {
+            baseProductos = res.data.productos;
+            actualizarDatalistProductos();
+          }
+        }).catch(err => console.error("Error al actualizar catálogos secundarios:", err));
+    }
+  });
+  
+  function calcularFila(input) {
+    const row = input.closest("tr");
+    if(!row) return;
+    const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
+    const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
+    const pIva = parseFloat(row.querySelector(".item-piva").value) || 0;
+    const pIpo = parseFloat(row.querySelector(".item-pipo").value) || 0;
+    const otros = parseFloat(row.querySelector(".item-otros").value) || 0;
+    
+    const subtotalItem = cant * valUnit;
+    const vIva = subtotalItem * (pIva / 100);
+    const vIpo = subtotalItem * (pIpo / 100);
+    const valorTotalItem = subtotalItem + vIva + vIpo + otros;
+    
+    row.querySelector(".item-tot").value = valorTotalItem;
+    row.querySelector(".item-viva").value = vIva;
+    row.querySelector(".item-vipo").value = vIpo;
+    
+    calcularTotalesGenerales();
+  }
+ 
+  function calcularTotalesGenerales() {
+    let subtotalConsolidado = 0;
+    let totalIva = 0;
+    let totalIpo = 0;
+    let totalItemsCount = 0;
+    
+    document.querySelectorAll(".item-row").forEach(row => {
+      const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
+      const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
+      
+      subtotalConsolidado += (cant * valUnit);
+      totalIva += parseFloat(row.querySelector(".item-viva").value) || 0;
+      totalIpo += parseFloat(row.querySelector(".item-vipo").value) || 0;
+      totalItemsCount += cant;
+    });
+    
+    const otrosDesc = parseFloat(document.getElementById("otrosDescuentos").value) || 0;
+    const totalFactura = subtotalConsolidado + totalIva + totalIpo + otrosDesc;
+    
+    document.getElementById("subtotalGeneral").value = Math.round(subtotalConsolidado);
+    document.getElementById("ivaGeneral").value = Math.round(totalIva);
+    document.getElementById("ipoconsumoGeneral").value = Math.round(totalIpo);
+    document.getElementById("cantidadGeneral").value = totalItemsCount;
+    document.getElementById("totalGeneral").value = Math.round(totalFactura);
+    
+    document.getElementById("porcentajeIva").value = subtotalConsolidado > 0 ? ((totalIva / subtotalConsolidado) * 100).toFixed(2) : 0;
+    document.getElementById("porcentajeIpoconsumo").value = subtotalConsolidado > 0 ? ((totalIpo / subtotalConsolidado) * 100).toFixed(2) : 0;
+  }
+
+  // FUNCIÓN INTEGRADA: Autocompletar proveedor por NIT
+  function autocompletarProveedor() {
+    const nitValue = document.getElementById("nit").value.trim();
+    if (!nitValue || esModoEdicion) return;
+
+    fetch(`${WEB_APP_URL}?action=buscarProveedorPorNit&nit=${encodeURIComponent(nitValue)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          document.getElementById("razonSocial").value = res.data.razonSocial || "";
+          document.getElementById("direccion").value = res.data.direccion || "";
+          document.getElementById("ciudad").value = res.data.ciudad || "";
+          document.getElementById("correo").value = res.data.correo || "";
+          document.getElementById("telefono").value = res.data.telefono || "";
+        }
+      })
+      .catch(err => console.error("Error al autocompletar proveedor: ", err));
+  }
+
+  function buscarFacturaCompra() {
+    const noFactura = document.getElementById("noFactura").value.trim();
+    if (!noFactura) {
+      alert("Por favor digite un número de factura para buscar.");
+      return;
+    }
+
+    document.getElementById("bodyItems").innerHTML = "<tr><td colspan='9' style='text-align:center;'>Buscando información...</td></tr>";
+
+    fetch(`${WEB_APP_URL}?action=buscarCompraFactura&noFactura=${encodeURIComponent(noFactura)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data) {
+          const comp = res.data;
+          esModoEdicion = true;
+
+          document.getElementById("nit").value = comp.nit || "";
+          document.getElementById("razonSocial").value = comp.razonSocial || "";
+          document.getElementById("direccion").value = comp.direccion || "";
+          document.getElementById("ciudad").value = comp.ciudad || "";
+          document.getElementById("correo").value = comp.correo || "";
+          document.getElementById("telefono").value = comp.telefono || "";
+          document.getElementById("comprador").value = comp.comprador || "";
+          document.getElementById("descripcionGeneral").value = comp.descripcionGeneral || "";
+          document.getElementById("cuentaPuc").value = comp.cuentaPuc || "";
+          document.getElementById("otrosDescuentos").value = comp.otrosDescuentos || 0;
+
+          if (comp.fecha) {
+            const fParts = comp.fecha.split("/");
+            if(fParts.length === 3) {
+              document.getElementById("fecha").value = `${fParts[2]}-${fParts[1]}-${fParts[0]}`;
+            } else {
+              document.getElementById("fecha").value = comp.fecha;
+            }
+          }
+
+          if(comp.urlArchivo) {
+            document.getElementById("txtArchivoPrevio").innerHTML = `<a href="${comp.urlArchivo}" target="_blank">✓ Ver Archivo Adjunto Original</a>`;
+          } else {
+            document.getElementById("txtArchivoPrevio").innerHTML = "Sin archivo previamente adjuntado.";
+          }
+
+          document.getElementById("bodyItems").innerHTML = "";
+          if (comp.items && comp.items.length > 0) {
+            comp.items.forEach(item => agregarFilaItem(item));
+          } else {
+            agregarFilaItem();
+          }
+
+          document.getElementById("btnEliminar").style.display = "inline-block";
+          document.getElementById("btnImprimir").style.display = "inline-block";
+          document.getElementById("btnGuardar").textContent = "Actualizar Factura de Compra";
+          alert("Factura cargada correctamente para edición/impresión.");
+        } else {
+          alert("La factura especificada no existe. Puede registrarla como nueva.");
+          limpiarFormularioCompleto();
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error de red intentando ubicar la factura.");
+        limpiarFormularioCompleto();
+      });
+  }
+
+  function eliminarFacturaCompra() {
+    const noFactura = document.getElementById("noFactura").value.trim();
+    if (!noFactura) return;
+
+    if (!confirm(`¿ESTÁ COMPLETAMENTE SEGURO de eliminar la factura [${noFactura}]?\nEsta acción borrará de forma irreversible sus registros en las pestañas EGRESOS, DETALLE y KARDEX.`)) {
+      return;
+    }
+
+    const btn = document.getElementById("btnEliminar");
+    btn.disabled = true;
+    btn.textContent = "Eliminando...";
+
+    const payload = {
+      action: "eliminarCompraCompleta",
+      noFactura: noFactura
+    };
+
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(res.result);
+        limpiarFormularioCompleto();
+      } else {
+        alert("Error al eliminar registros: " + res.error);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error crítico comunicando el borrado definitivo.");
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = "Borrar Factura";
+    });
+  }
+
+  function limpiarFormularioCompleto() {
+    document.getElementById("compraForm").reset();
+    document.getElementById("bodyItems").innerHTML = "";
+    document.getElementById("txtArchivoPrevio").innerHTML = "";
+    esModoEdicion = false;
+    document.getElementById("btnEliminar").style.display = "none";
+    document.getElementById("btnImprimir").style.display = "none";
+    document.getElementById("btnGuardar").textContent = "Registrar Factura de Compra";
+    agregarFilaItem();
+    document.getElementById('fecha').valueAsDate = new Date();
+  }
+ 
+  document.getElementById("compraForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+    const btn = document.getElementById("btnGuardar");
+    btn.disabled = true;
+    btn.textContent = "Procesando información...";
+    
+    const fileInput = document.getElementById("archivoAdjunto");
+    const file = fileInput.files[0];
+    
+    if (file) {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = function() {
+        enviarDatosFormulario(reader.result, file.name, file.type);
+      };
+    } else {
+      enviarDatosFormulario("", "", "");
+    }
+  });
+ 
+  function enviarDatosFormulario(base64Data, fileName, fileMime) {
+    const items = [];
+    document.querySelectorAll(".item-row").forEach(row => {
+      const inputProd = row.querySelector(".item-prod");
+      const textoDigitado = inputProd.value.trim();
+      
+      const prodEncontrado = baseProductos.find(p => p.descripcion.toLowerCase() === textoDigitado.toLowerCase());
+      const idProducto = prodEncontrado ? prodEncontrado.idUnico : "";
+      
+      const cant = parseFloat(row.querySelector(".item-cant").value) || 0;
+      const valUnit = parseFloat(row.querySelector(".item-val").value) || 0;
+      
+      items.push({
+        idProducto: idProducto,
+        descripcion: textoDigitado,
+        cantidad: cant,
+        valorUnitario: valUnit,
+        disabled: false,
+        unidadMedida: row.querySelector(".item-unid").value,
+        ivaItem: parseFloat(row.querySelector(".item-viva").value) || 0,
+        ipoconsumoItem: parseFloat(row.querySelector(".item-vipo").value) || 0,
+        otrosItem: parseFloat(row.querySelector(".item-otros").value) || 0,
+        valorTotalItem: parseFloat(row.querySelector(".item-tot").value) || 0,
+        incluirKardex: row.querySelector(".item-kardex").checked
+      });
+    });
+ 
+    const payload = {
+      action: esModoEdicion ? "editarCompraCompleta" : "crearCompra",
+      data: {
+        noFactura: document.getElementById("noFactura").value,
+        nit: document.getElementById("nit").value,
+        razonSocial: document.getElementById("razonSocial").value,
+        fecha: document.getElementById("fecha").value,
+        direccion: document.getElementById("direccion").value,
+        ciudad: document.getElementById("ciudad").value,
+        correo: document.getElementById("correo").value,
+        telefono: document.getElementById("telefono").value,
+        comprador: document.getElementById("comprador").value,
+        descripcionGeneral: document.getElementById("descripcionGeneral").value,
+        cuentaPuc: document.getElementById("cuentaPuc").value,
+        archivoB64: base64Data,
+        archivoNombre: fileName,
+        archivoMime: fileMime,
+        
+        subtotalGeneral: parseFloat(document.getElementById("subtotalGeneral").value),
+        porcentajeIva: parseFloat(document.getElementById("porcentajeIva").value),
+        ivaGeneral: parseFloat(document.getElementById("ivaGeneral").value),
+        porcentajeIpoconsumo: parseFloat(document.getElementById("porcentajeIpoconsumo").value),
+        ipoconsumoGeneral: parseFloat(document.getElementById("ipoconsumoGeneral").value),
+        otrosDescuentos: parseFloat(document.getElementById("otrosDescuentos").value),
+        cantidadGeneral: parseFloat(document.getElementById("cantidadGeneral").value),
+        totalGeneral: parseFloat(document.getElementById("totalGeneral").value),
+        items: items
+      }
+    };
+ 
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(res.result);
+        limpiarFormularioCompleto();
+      } else {
+        alert("Error de procesamiento: " + res.error);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error crítico de red enviando los datos a Google Apps Script.");
+    })
+    .finally(() => {
+      const btn = document.getElementById("btnGuardar");
+      btn.disabled = false;
+      if(!esModoEdicion) {
+        btn.textContent = "Registrar Factura de Compra";
+      } else {
+        btn.textContent = "Actualizar Factura de Compra";
+      }
+    });
+  }
+</script>
+ 
+</body>
+</html>
