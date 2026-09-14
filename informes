@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Informes Oficiales</title>
+    <style>
+        :root {
+            --primary: #5f6368;
+            --primary-dark: #3c4043;
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --border: #dadce0;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg); margin: 0; padding: 40px 20px;
+            color: #202124;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .no-print-container {
+            width: 100%; max-width: 900px; background: var(--card);
+            padding: 25px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            margin: 0 auto 20px auto; box-sizing: border-box;
+        }
+        h2 { margin-top: 0; color: var(--primary-dark); border-bottom: 2px solid var(--border); padding-bottom: 10px; }
+        .row-inline { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
+        .form-group { flex: 1; min-width: 200px; display: flex; flex-direction: column; }
+        label { font-weight: 600; margin-bottom: 5px; font-size: 14px; color: #3c4043; }
+        select, input { padding: 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 14px; background: white; }
+        
+        .btn-generate { background-color: #1a73e8; color: white; border: none; padding: 12px 20px; font-size: 15px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s; width: 100%; margin-top: 10px; }
+        .btn-generate:hover { background-color: #1557b0; }
+        .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .btn-print { background-color: #1aa260; color: white; border: none; padding: 12px 20px; font-size: 15px; font-weight: bold; border-radius: 4px; cursor: pointer; display: none; width: 100%; margin-top: 10px; }
+        .btn-print:hover { background-color: #137e49; }
+
+        .report-paper {
+            width: 100%; max-width: 1100px; background: white; margin: 0 auto 25px auto;
+            padding: 40px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            box-sizing: border-box; display: none;
+        }
+        .report-header { text-align: center; margin-bottom: 30px; border-bottom: 3px double #000; padding-bottom: 15px; }
+        .report-header h1 { margin: 0 0 5px 0; font-size: 26px; text-transform: uppercase; }
+        .report-header p { margin: 5px 0; color: #5f6368; font-size: 14px; }
+        
+        .table-wrapper { overflow-x: auto; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 12px; }
+        th, td { border: 1px solid #bcbcbc; padding: 8px 6px; text-align: left; }
+        th { background-color: #f1f3f4; font-weight: bold; color: #000; text-transform: uppercase; font-size: 11px; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+
+        .report-totales { margin-top: 15px; text-align: right; font-size: 13px; font-weight: bold; }
+
+        /* === ESTILOS PARA EL PIE DE PÁGINA CENTRADO DE SURTECOL === */
+        .surtecol-footer {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+            margin-top: 20px;
+            padding: 10px 0;
+            box-sizing: border-box;
+        }
+        .surtecol-footer p {
+            margin: 5px 0;
+            color: #000000;
+        }
+        .surtecol-logo-container {
+            margin-top: 15px;
+        }
+        .surtecol-logo-container img {
+            width: 80px;
+            height: auto;
+            display: inline-block;
+        }
+
+        @media print {
+            body { background: white; padding: 0; margin: 0; }
+            .no-print-container, .surtecol-footer { display: none !important; }
+            .report-paper { display: block !important; box-shadow: none !important; padding: 0; max-width: 100%; }
+            th { background-color: #e8eaed !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            tr:nth-child(even) { background-color: #f8f9fa !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="no-print-container">
+    <h2>Centro de Generación de Informes</h2>
+    <div class="row-inline">
+        <div class="form-group">
+            <label for="tipo_reporte">Selecciona el Módulo:</label>
+            <select id="tipo_reporte">
+                <option value="BASE DE DATOS">Base de Datos (Clientes / Contactos)</option>
+                <option value="INGRESOS">Reporte de Ingresos</option>
+                <option value="EGRESOS">Reporte de Egresos</option>
+                <option value="PRESUPUESTOS">Reporte de Presupuestos</option>
+            </select>
+        </div>
+    </div>
+    <div class="row-inline">
+        <div class="form-group">
+            <label for="fecha_inicio">Fecha Inicial:</label>
+            <input type="date" id="fecha_inicio">
+        </div>
+        <div class="form-group">
+            <label for="fecha_fin">Fecha Final:</label>
+            <input type="date" id="fecha_fin">
+        </div>
+    </div>
+    
+    <button type="button" class="btn-generate" onclick="procesarInforme()">Generar Vista Previa del Reporte</button>
+    <button type="button" id="btnPrint" class="btn-print" onclick="window.print()">Imprimir / Guardar como PDF</button>
+</div>
+
+<div id="reportPaper" class="report-paper">
+    <div class="report-header">
+        <h1 id="rep_titulo">Informe General</h1>
+        <p id="rep_fechas">Período: General</p>
+        <p style="font-size: 11px; font-style: italic;">Generado automáticamente el: <span id="rep_emision"></span></p>
+    </div>
+    
+    <div class="table-wrapper">
+        <table id="tablaReporte">
+            <thead id="tablaCabecera"></thead>
+            <tbody id="tablaCuerpo"></tbody>
+        </table>
+    </div>
+    <div id="rep_totales" class="report-totales"></div>
+</div>
+
+<div class="surtecol-footer">
+    <p style="font-size: 16px;">
+        Este es un desarrollo creado por <strong style="text-decoration: underline;">Surtecol</strong>
+    </p>
+    <p style="font-size: 15px; font-weight: bold;">
+        Tel.: +573188097131 &nbsp;&nbsp;|&nbsp;&nbsp; email: surtecol@gmail.com &nbsp;&nbsp;|&nbsp;&nbsp; Colombia
+    </p>
+    <div class="surtecol-logo-container">
+        <img src="logo1.png?v=2" alt="Logo Surtecol" onerror="this.src='logo1.PNG?v=2'" />
+    </div>
+</div>
+
+<script>
+    // Mismo Web App que usan fcompra.html, productos.html e index.html
+    const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpYG9qByjvcK06ShRLpS9QnLEvQyYnO4OmeilNl6JGT1-U24P27gGRtgKgtPjT0hKv/exec";
+
+    // Índices de columna (0-based) donde cada módulo trae un valor monetario para totalizar al pie
+    const COLUMNA_TOTAL_POR_MODULO = {
+        'INGRESOS': 4,
+        'EGRESOS': 4
+    };
+
+    async function procesarInforme() {
+        const tipoReporte = document.getElementById('tipo_reporte').value;
+        const fInicio = document.getElementById('fecha_inicio').value;
+        const fFin = document.getElementById('fecha_fin').value;
+
+        if ((fInicio && !fFin) || (!fInicio && fFin)) {
+            return alert("Por favor define el rango completo (Fecha inicial y Fecha final).");
+        }
+
+        const btnGen = document.querySelector('.btn-generate');
+        btnGen.innerText = "Extrayendo registros financieros...";
+        btnGen.disabled = true;
+
+        try {
+            let url = `${WEB_APP_URL}?action=generarInforme&tipoReporte=${encodeURIComponent(tipoReporte)}`;
+            if (fInicio) url += `&fechaInicio=${encodeURIComponent(fInicio)}`;
+            if (fFin) url += `&fechaFin=${encodeURIComponent(fFin)}`;
+
+            const response = await fetch(url);
+            const res = await response.json();
+
+            if (res && res.success) {
+                const cabeceras = res.data.cabeceras || [];
+                const filas = res.data.filas || [];
+
+                document.getElementById('rep_titulo').innerText = "INFORME OFICIAL DE " + tipoReporte;
+                document.getElementById('rep_emision').innerText = new Date().toLocaleString();
+
+                if (fInicio && fFin) {
+                    document.getElementById('rep_fechas').innerText = `Período del: ${fInicio.split('-').reverse().join('/')} al ${fFin.split('-').reverse().join('/')}`;
+                } else {
+                    document.getElementById('rep_fechas').innerText = "Período: Histórico General Completo";
+                }
+
+                const cabeceraTr = document.getElementById('tablaCabecera');
+                cabeceraTr.innerHTML = "";
+                const trHead = document.createElement('tr');
+                cabeceras.forEach(titulo => {
+                    const th = document.createElement('th');
+                    th.innerText = titulo;
+                    trHead.appendChild(th);
+                });
+                cabeceraTr.appendChild(trHead);
+
+                const cuerpoTbody = document.getElementById('tablaCuerpo');
+                cuerpoTbody.innerHTML = "";
+
+                if (filas.length === 0) {
+                    const trEmpty = document.createElement('tr');
+                    const tdEmpty = document.createElement('td');
+                    tdEmpty.colSpan = cabeceras.length || 1;
+                    tdEmpty.innerText = "No se encontraron registros en el rango de fechas seleccionado.";
+                    tdEmpty.style.textAlign = "center";
+                    tdEmpty.style.padding = "20px";
+                    trEmpty.appendChild(tdEmpty);
+                    cuerpoTbody.appendChild(trEmpty);
+                } else {
+                    let sumaTotal = 0;
+                    const colTotal = COLUMNA_TOTAL_POR_MODULO[tipoReporte];
+
+                    filas.forEach(fila => {
+                        const tr = document.createElement('tr');
+                        fila.forEach((celda, idx) => {
+                            const td = document.createElement('td');
+                            if (typeof celda === "number" && idx === colTotal) {
+                                td.innerText = "$ " + celda.toLocaleString('es-CO', { minimumFractionDigits: 2 });
+                                sumaTotal += celda;
+                            } else {
+                                td.innerText = celda === null || celda === undefined ? "" : celda;
+                            }
+                            tr.appendChild(td);
+                        });
+                        cuerpoTbody.appendChild(tr);
+                    });
+
+                    const totalesDiv = document.getElementById('rep_totales');
+                    if (colTotal !== undefined) {
+                        totalesDiv.innerText = "TOTAL: $ " + sumaTotal.toLocaleString('es-CO', { minimumFractionDigits: 2 });
+                    } else {
+                        totalesDiv.innerText = "";
+                    }
+                }
+
+                document.getElementById('reportPaper').style.display = 'block';
+                document.getElementById('btnPrint').style.display = 'block';
+                document.getElementById('reportPaper').scrollIntoView({ behavior: 'smooth' });
+
+            } else {
+                alert("Error en la extracción: " + (res.error || "Error Desconocido"));
+            }
+        } catch (error) {
+            alert("Error de red o comunicación: " + error.message);
+        } finally {
+            btnGen.innerText = "Generar Vista Previa del Reporte";
+            btnGen.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>
