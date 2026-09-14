@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conteo Físico de Inventario</title>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --accent: #16a085;
+      --bg: #f5f6fa;
+      --border: #dcdde1;
+      --danger: #d93025;
+      --success: #1aa260;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      width: 100%;
+      max-width: 1000px;
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      box-sizing: border-box;
+    }
+    h2 {
+      color: var(--primary);
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 10px;
+      margin-top: 0;
+    }
+    .toolbar {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+      align-items: center;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    .btn {
+      background-color: var(--accent);
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .btn:hover { background-color: #117a65; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-secundario {
+      background-color: #7f8c8d;
+    }
+    .btn-secundario:hover { background-color: #636e72; }
+
+    .table-container {
+      max-height: 500px;
+      overflow-y: auto;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      background-color: #f8f9fa;
+      color: var(--primary);
+      position: sticky;
+      top: 0;
+      box-shadow: 0 1px 0 var(--border);
+    }
+    td.numerico, th.numerico { text-align: right; }
+    input.input-cantidad {
+      width: 90px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 13px;
+      text-align: right;
+    }
+    input.input-cantidad:focus { border-color: var(--accent); outline: none; }
+
+    .info-nota {
+      font-size: 13px;
+      color: #7f8c8d;
+      margin-bottom: 15px;
+      font-style: italic;
+    }
+    .barra-guardar {
+      margin-top: 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* === Sección de consulta de conteos ya guardados === */
+    .container-consulta {
+      width: 100%;
+      max-width: 1000px;
+      background: white;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      box-sizing: border-box;
+      margin-top: 25px;
+    }
+    .reporte-conteo-header {
+      text-align: center;
+      margin-bottom: 20px;
+      border-bottom: 3px double #000;
+      padding-bottom: 10px;
+      display: none;
+    }
+    .reporte-conteo-header h3 { margin: 0 0 5px 0; font-size: 20px; text-transform: uppercase; }
+    .reporte-conteo-header p { margin: 3px 0; color: #5f6368; font-size: 13px; }
+    tfoot td { font-weight: bold; background-color: #f1f3f4; border-top: 2px solid var(--primary); }
+    td.diferencia-positiva { color: var(--success); font-weight: bold; }
+    td.diferencia-negativa { color: var(--danger); font-weight: bold; }
+
+    @media print {
+      body { background: white; padding: 0; margin: 0; }
+      .container, .surtecol-footer, .toolbar, #btnImprimirConteo, .info-nota, #tituloConsulta { display: none !important; }
+      .container-consulta { box-shadow: none !important; padding: 0; max-width: 100%; }
+      .reporte-conteo-header { display: block !important; }
+      #resultadoConteo { display: block !important; }
+    }
+
+    /* === ESTILOS PARA EL PIE DE PÁGINA CENTRADO DE SURTECOL === */
+    .surtecol-footer {
+      width: 100%;
+      max-width: 1000px;
+      text-align: center;
+      margin-top: 30px;
+      padding: 10px 0;
+      box-sizing: border-box;
+    }
+    .surtecol-footer p {
+      margin: 5px 0;
+      color: #000000;
+    }
+    .surtecol-logo-container {
+      margin-top: 15px;
+    }
+    .surtecol-logo-container img {
+      width: 80px;
+      height: auto;
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Conteo Físico de Inventario</h2>
+  <p class="info-nota">Digita la cantidad física contada para cada ítem y presiona "Guardar Conteo". El sistema registrará automáticamente la fecha de hoy y las diferencias frente al TOTAL del sistema, y dejará la columna de Cantidad Física lista para el próximo conteo.</p>
+
+  <div class="toolbar">
+    <input type="text" id="inputBuscar" class="search-box" placeholder="Filtrar por ID, descripción o factura..." onkeyup="filtrarTabla()">
+    <button type="button" class="btn btn-secundario" onclick="cargarInventario()">Recargar</button>
+  </div>
+
+  <div class="table-container">
+    <table id="tablaInventario">
+      <thead>
+        <tr>
+          <th>ID_UNICO</th>
+          <th>FECHA</th>
+          <th>No. FACTURA</th>
+          <th>DESCRIPCIÓN</th>
+          <th class="numerico">TOTAL (Sistema)</th>
+          <th class="numerico">CANTIDAD FÍSICA</th>
+        </tr>
+      </thead>
+      <tbody id="bodyInventario">
+        <tr>
+          <td colspan="6" style="text-align:center; color:#7f8c8d;">Cargando inventario...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="barra-guardar">
+    <button type="button" class="btn" id="btnGuardar" onclick="guardarConteo()">Guardar Conteo</button>
+  </div>
+</div>
+
+<div class="container-consulta">
+  <h2 id="tituloConsulta">Consultar Conteos Realizados</h2>
+  <p class="info-nota">Selecciona la fecha de un conteo ya guardado para ver los saldos (Total del sistema, Cantidad Física y Diferencia) registrados ese día, y opcionalmente imprimirlo.</p>
+
+  <div class="toolbar">
+    <select id="selectConteo" class="search-box">
+      <option value="">Cargando fechas de conteo...</option>
+    </select>
+    <button type="button" class="btn" onclick="verConteoSeleccionado()">Ver Conteo</button>
+    <button type="button" class="btn btn-secundario" id="btnImprimirConteo" style="display:none;" onclick="window.print()">Imprimir</button>
+  </div>
+
+  <div class="reporte-conteo-header" id="reporteConteoHeader">
+    <h3>Conteo Físico de Inventario</h3>
+    <p id="reporteConteoFecha">Fecha del conteo: -</p>
+    <p style="font-style: italic;">Generado el: <span id="reporteConteoEmision"></span></p>
+  </div>
+
+  <div id="resultadoConteo" style="display:none;">
+    <div class="table-container">
+      <table id="tablaResultadoConteo">
+        <thead>
+          <tr>
+            <th>ID_UNICO</th>
+            <th>DESCRIPCIÓN</th>
+            <th class="numerico">TOTAL SISTEMA</th>
+            <th class="numerico">CANTIDAD FÍSICA</th>
+            <th class="numerico">DIFERENCIA</th>
+          </tr>
+        </thead>
+        <tbody id="bodyResultadoConteo"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="2">TOTALES</td>
+            <td class="numerico" id="totalSistemaConteo">0.00</td>
+            <td class="numerico" id="totalFisicaConteo">0.00</td>
+            <td class="numerico" id="totalDiferenciaConteo">0.00</td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="surtecol-footer">
+    <p style="font-size: 16px;">
+        Este es un desarrollo creado por <strong style="text-decoration: underline;">Surtecol</strong>
+    </p>
+    <p style="font-size: 15px; font-weight: bold;">
+        Tel.: +573188097131 &nbsp;&nbsp;|&nbsp;&nbsp; email: surtecol@gmail.com &nbsp;&nbsp;|&nbsp;&nbsp; Colombia
+    </p>
+    <div class="surtecol-logo-container">
+        <img src="logo1.png?v=2" alt="Logo Surtecol" onerror="this.src='logo1.PNG?v=2'" />
+    </div>
+</div>
+
+<script>
+  // Mismo Web App que usan fcompra.html, productos.html, informes.html y ejercicio.html
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpYG9qByjvcK06ShRLpS9QnLEvQyYnO4OmeilNl6JGT1-U24P27gGRtgKgtPjT0hKv/exec";
+
+  let inventarioCargado = [];
+
+  document.addEventListener("DOMContentLoaded", cargarInventario);
+
+  function cargarInventario() {
+    const tbody = document.getElementById("bodyInventario");
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#7f8c8d;">Cargando inventario...</td></tr>`;
+
+    fetch(`${WEB_APP_URL}?action=getInventarioConteo`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          inventarioCargado = res.data || [];
+          renderizarTabla(inventarioCargado);
+        } else {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--danger);">Error: ${res.error}</td></tr>`;
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--danger);">Error de red al cargar el inventario.</td></tr>`;
+      });
+  }
+
+  function renderizarTabla(items) {
+    const tbody = document.getElementById("bodyInventario");
+    tbody.innerHTML = "";
+
+    if (items.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No hay productos registrados en INVENTARIO.</td></tr>`;
+      return;
+    }
+
+    items.forEach(item => {
+      const tr = document.createElement("tr");
+      tr.dataset.idUnico = item.idUnico;
+      tr.innerHTML = `
+        <td><strong>${item.idUnico}</strong></td>
+        <td>${item.fecha || ''}</td>
+        <td>${item.noFactura || ''}</td>
+        <td>${item.descripcion || ''}</td>
+        <td class="numerico">${formatNumero(item.total)}</td>
+        <td class="numerico">
+          <input type="number" step="any" class="input-cantidad" data-id="${item.idUnico}" value="${item.cantidadFisica !== '' && item.cantidadFisica !== null && item.cantidadFisica !== undefined ? item.cantidadFisica : ''}" placeholder="0">
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function formatNumero(valor) {
+    const n = Number(valor) || 0;
+    return n.toLocaleString('es-CO', { minimumFractionDigits: 2 });
+  }
+
+  function guardarConteo() {
+    const inputs = document.querySelectorAll("#bodyInventario .input-cantidad");
+    const items = [];
+
+    inputs.forEach(input => {
+      const valor = input.value.trim();
+      if (valor !== "") {
+        items.push({
+          idUnico: input.dataset.id,
+          cantidadFisica: Number(valor)
+        });
+      }
+    });
+
+    if (items.length === 0) {
+      return alert("No has digitado ninguna cantidad física. Ingresa al menos un valor antes de guardar.");
+    }
+
+    if (!confirm(`Vas a guardar el conteo físico de ${items.length} ítem(s). Se creará una nueva columna con la fecha de hoy y las diferencias, y la Cantidad Física quedará en blanco para el próximo conteo. ¿Continuar?`)) {
+      return;
+    }
+
+    const btn = document.getElementById("btnGuardar");
+    btn.disabled = true;
+    btn.textContent = "Guardando...";
+
+    fetch(WEB_APP_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "guardarConteoInventario",
+        data: { items: items }
+      })
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(res.result);
+        cargarInventario(); // Recarga para reflejar la columna E ya en blanco
+      } else {
+        alert("Error: " + res.error);
+      }
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error de red al guardar el conteo.");
+    })
+    .finally(() => {
+      btn.disabled = false;
+      btn.textContent = "Guardar Conteo";
+    });
+  }
+
+  function filtrarTabla() {
+    const filtro = document.getElementById("inputBuscar").value.toUpperCase();
+    const filas = document.getElementById("bodyInventario").getElementsByTagName("tr");
+    for (let i = 0; i < filas.length; i++) {
+      const texto = filas[i].textContent || filas[i].innerText;
+      filas[i].style.display = texto.toUpperCase().indexOf(filtro) > -1 ? "" : "none";
+    }
+  }
+
+  // ===========================================================================
+  // Consulta e impresión de conteos ya guardados
+  // ===========================================================================
+
+  document.addEventListener("DOMContentLoaded", cargarListaConteos);
+
+  function cargarListaConteos() {
+    const select = document.getElementById("selectConteo");
+    fetch(`${WEB_APP_URL}?action=listarConteosInventario`)
+      .then(res => res.json())
+      .then(res => {
+        select.innerHTML = "";
+        if (res.success && res.data && res.data.length > 0) {
+          const optDefault = document.createElement("option");
+          optDefault.value = "";
+          optDefault.textContent = "Selecciona una fecha de conteo...";
+          select.appendChild(optDefault);
+
+          res.data.forEach(item => {
+            const opt = document.createElement("option");
+            opt.value = item.columna;
+            opt.textContent = item.fecha;
+            select.appendChild(opt);
+          });
+        } else {
+          select.innerHTML = `<option value="">Aún no hay conteos guardados</option>`;
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        select.innerHTML = `<option value="">Error al cargar las fechas</option>`;
+      });
+  }
+
+  function verConteoSeleccionado() {
+    const select = document.getElementById("selectConteo");
+    const columna = select.value;
+
+    if (!columna) {
+      return alert("Selecciona primero una fecha de conteo.");
+    }
+
+    fetch(`${WEB_APP_URL}?action=consultarConteoInventario&columna=${encodeURIComponent(columna)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          renderizarConteo(res.data);
+        } else {
+          alert("Error al consultar el conteo: " + res.error);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        alert("Error de red al consultar el conteo.");
+      });
+  }
+
+  function renderizarConteo(datos) {
+    const tbody = document.getElementById("bodyResultadoConteo");
+    tbody.innerHTML = "";
+
+    datos.filas.forEach(fila => {
+      const tr = document.createElement("tr");
+      const claseDif = fila.diferencia > 0 ? "diferencia-positiva" : (fila.diferencia < 0 ? "diferencia-negativa" : "");
+      tr.innerHTML = `
+        <td>${fila.idUnico}</td>
+        <td>${fila.descripcion || ''}</td>
+        <td class="numerico">${formatNumero(fila.total)}</td>
+        <td class="numerico">${formatNumero(fila.cantidadFisica)}</td>
+        <td class="numerico ${claseDif}">${formatNumero(fila.diferencia)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById("totalSistemaConteo").textContent = formatNumero(datos.totales.totalSistema);
+    document.getElementById("totalFisicaConteo").textContent = formatNumero(datos.totales.totalFisica);
+    document.getElementById("totalDiferenciaConteo").textContent = formatNumero(datos.totales.totalDiferencia);
+
+    document.getElementById("reporteConteoFecha").textContent = "Fecha del conteo: " + datos.fecha;
+    document.getElementById("reporteConteoEmision").textContent = new Date().toLocaleString();
+
+    document.getElementById("reporteConteoHeader").style.display = "block";
+    document.getElementById("resultadoConteo").style.display = "block";
+    document.getElementById("btnImprimirConteo").style.display = "inline-block";
+  }
+</script>
+</body>
+</html>
