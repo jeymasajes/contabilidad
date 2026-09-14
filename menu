@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Menú Principal - Sistema Contable</title>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --accent: #16a085;
+      --bg: #f5f6fa;
+      --border: #dcdde1;
+      --disabled: #b2bec3;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg);
+      margin: 0;
+      padding: 30px 20px 10px 20px;
+      color: #333;
+      min-height: 100vh;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .top-bar {
+      width: 100%;
+      max-width: 900px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    #nombreEmpresa {
+      color: var(--primary);
+      font-size: 22px;
+      margin: 0;
+    }
+    .btn-salir {
+      background: none;
+      border: 1px solid var(--border);
+      color: #7f8c8d;
+      padding: 7px 14px;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .btn-salir:hover { background: #f1f2f6; }
+
+    .container {
+      width: 100%;
+      max-width: 900px;
+      background: white;
+      padding: 40px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      box-sizing: border-box;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: auto auto auto;
+      gap: 30px;
+      align-items: center;
+      justify-items: center;
+    }
+
+    .tile {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      width: 100%;
+      min-height: 70px;
+      padding: 15px;
+      border-radius: 8px;
+      background-color: #eef2f3;
+      border-left: 4px solid var(--accent);
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 15px;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-sizing: border-box;
+    }
+    .tile:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+    }
+    .tile.disabled {
+      background-color: #f1f2f6;
+      border-left-color: var(--disabled);
+      color: var(--disabled);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .tile.disabled .sub {
+      display: block;
+      font-size: 10px;
+      font-weight: 400;
+      text-transform: none;
+      margin-top: 4px;
+    }
+
+    .tile-ventas      { grid-column: 2; grid-row: 1; }
+    .centro-logo      { grid-column: 2; grid-row: 2; display:flex; flex-direction:column; align-items:center; justify-self:center; }
+    .tile-compras     { grid-column: 1; grid-row: 2; }
+    .tile-productos   { grid-column: 3; grid-row: 2; }
+    .tile-nomina      { grid-column: 1; grid-row: 3; }
+    .tile-inventario  { grid-column: 3; grid-row: 3; }
+
+    .centro-logo img {
+      width: 90px;
+      height: auto;
+    }
+    .fecha-sistema {
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 8px;
+      font-size: 15px;
+    }
+
+    .seccion-informes {
+      margin-top: 45px;
+      text-align: center;
+    }
+    .seccion-informes h3 {
+      color: var(--primary);
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    .fila-informes {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    .fila-informes .tile {
+      max-width: 220px;
+    }
+
+    /* === Pie de página de Surtecol SIN logo === */
+    .surtecol-footer {
+      width: 100%;
+      max-width: 900px;
+      text-align: center;
+      margin-top: 25px;
+      padding: 15px 0;
+      box-sizing: border-box;
+    }
+    .surtecol-footer p { margin: 5px 0; color: #000000; }
+
+    @media (max-width: 620px) {
+      .menu-grid { grid-template-columns: 1fr; grid-template-rows: auto; }
+      .tile-ventas, .centro-logo, .tile-compras, .tile-productos, .tile-nomina, .tile-inventario {
+        grid-column: 1;
+        grid-row: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <h2 id="nombreEmpresa">Cargando...</h2>
+  <button type="button" class="btn-salir" onclick="cerrarSesion()">Cerrar sesión</button>
+</div>
+
+<div class="container">
+  <div class="menu-grid">
+    <a class="tile tile-ventas" href="index.html">Factura de Ventas</a>
+
+    <a class="tile tile-compras" href="fcompra.html">Factura de Compras</a>
+
+    <div class="centro-logo">
+      <img src="logo1.png?v=2" alt="Logo" onerror="this.src='logo1.PNG?v=2'">
+      <div class="fecha-sistema" id="fechaSistema">--/--/----</div>
+    </div>
+
+    <a class="tile tile-productos" href="productos.html">Productos</a>
+
+    <span class="tile tile-nomina disabled">Nómina<span class="sub">Próximamente</span></span>
+
+    <a class="tile tile-inventario" href="inventario.html">Inventario</a>
+  </div>
+
+  <div class="seccion-informes">
+    <h3>Informes:</h3>
+    <div class="fila-informes">
+      <a class="tile" href="informes.html">Reportes</a>
+      <a class="tile" href="ejercicio.html">Resultados</a>
+    </div>
+  </div>
+</div>
+
+<div class="surtecol-footer">
+  <p style="font-size: 16px;">
+    Este es un desarrollo creado por <strong style="text-decoration: underline;">Surtecol</strong>
+  </p>
+  <p style="font-size: 15px; font-weight: bold;">
+    Tel.: +573188097131 &nbsp;&nbsp;|&nbsp;&nbsp; email: surtecol@gmail.com &nbsp;&nbsp;|&nbsp;&nbsp; Colombia
+  </p>
+</div>
+
+<script>
+  // Mismo Web App usado por el resto del sistema
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpYG9qByjvcK06ShRLpS9QnLEvQyYnO4OmeilNl6JGT1-U24P27gGRtgKgtPjT0hKv/exec";
+
+  // Puerta de acceso: si no viene de un login válido en esta sesión del navegador, regresa al login
+  if (sessionStorage.getItem("accesoValido") !== "true") {
+    window.location.href = "login.html";
+  }
+
+  document.addEventListener("DOMContentLoaded", cargarDatosPublicos);
+
+  function cargarDatosPublicos() {
+    // Usa el nombre que trajo el login como respuesta inmediata, y luego confirma/actualiza con el backend
+    const nombreGuardado = sessionStorage.getItem("nombreEmpresa");
+    if (nombreGuardado) {
+      document.getElementById("nombreEmpresa").textContent = nombreGuardado;
+    }
+
+    fetch(`${WEB_APP_URL}?action=getDatosPublicos`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          document.getElementById("nombreEmpresa").textContent = res.data.nombreEmpresa || nombreGuardado || "Sistema Contable";
+          document.getElementById("fechaSistema").textContent = formatearFecha(res.data.fecha);
+        }
+      })
+      .catch(() => {
+        if (!nombreGuardado) {
+          document.getElementById("nombreEmpresa").textContent = "Sistema Contable";
+        }
+      });
+  }
+
+  function formatearFecha(valor) {
+    if (!valor) return "";
+    const posibleFecha = new Date(valor);
+    if (!isNaN(posibleFecha.getTime()) && valor.toString().indexOf('/') === -1) {
+      const dia = String(posibleFecha.getDate()).padStart(2, '0');
+      const mes = String(posibleFecha.getMonth() + 1).padStart(2, '0');
+      const anio = posibleFecha.getFullYear();
+      return `${dia}/${mes}/${anio}`;
+    }
+    return valor.toString();
+  }
+
+  function cerrarSesion() {
+    sessionStorage.removeItem("accesoValido");
+    sessionStorage.removeItem("nombreEmpresa");
+    window.location.href = "login.html";
+  }
+</script>
+</body>
+</html>
