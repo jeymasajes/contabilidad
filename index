@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Módulo de Facturación Contable - FACTURACION</title>
+  <style>
+    :root { --primary: #2c3e50; --accent: #16a085; --bg: #f5f6fa; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); margin: 0; padding: 20px; color: #333; display: flex; flex-direction: column; align-items: center; min-height: 100vh; box-sizing: border-box; }
+    .container { width: 100%; max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); box-sizing: border-box; }
+    h2 { color: var(--primary); border-bottom: 2px solid var(--bg); padding-bottom: 10px; margin-top: 0; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 15px; margin-bottom: 20px; }
+    .form-group { display: flex; flex-direction: column; }
+    label { font-size: 11px; font-weight: bold; margin-bottom: 5px; color: #555; text-transform: uppercase; }
+    input, select { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+    input:readonly { background-color: #e9ecef; color: #6c757d; }
+    .search-panel { background: #e8f4f1; padding: 15px; border-radius: 6px; margin-bottom: 25px; display: flex; gap: 10px; align-items: flex-end; }
+    table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 13px; }
+    th { background: var(--primary); color: white; padding: 12px; text-align: left; }
+    td { padding: 8px; border-bottom: 1px solid #ddd; }
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; text-transform: uppercase; font-size: 12px; transition: 0.2s; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-accent { background: var(--accent); color: white; }
+    .btn-danger { background: #e74c3c; color: white; }
+    .btn-print { background: #f39c12; color: white; }
+    .btn:hover { opacity: 0.9; }
+    .totals-box { width: 350px; margin-left: auto; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #eee; }
+    .totals-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; align-items: center; }
+    .totals-row.grand-total { font-weight: bold; color: var(--accent); border-top: 2px solid #ddd; padding-top: 8px; font-size: 16px; }
+    .footer-ctrls { margin-top: 20px; padding-top: 20px; border-top: 2px solid #f5f6fa; display: flex; justify-content: space-between; align-items: center; }
+
+    #printArea { display: none; }
+
+    /* === ESTILOS PARA EL PIE DE PÁGINA CENTRADO DE SURTECOL === */
+    .surtecol-footer {
+        width: 100%;
+        max-width: 1200px;
+        text-align: center;
+        margin-top: 30px;
+        padding: 10px 0;
+        box-sizing: border-box;
+    }
+    .surtecol-footer p {
+        margin: 5px 0;
+        color: #000000;
+    }
+    .surtecol-logo-container {
+        margin-top: 15px;
+    }
+    .surtecol-logo-container img {
+        width: 80px;
+        height: auto;
+        display: inline-block;
+    }
+
+    @media print {
+      body { background: white; padding: 0; color: #000; }
+      .container, .surtecol-footer { display: none !important; }
+      #printArea { display: block !important; font-family: 'Courier New', monospace; font-size: 14px; width: 100%; }
+      .print-header { display: flex; justify-content: space-between; border-bottom: 2px dashed #000; padding-bottom: 15px; margin-bottom: 20px; }
+      .print-table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+      .print-table th { background: #eee !important; color: #000; font-weight: bold; border-bottom: 1px solid #000; }
+      .print-table td { padding: 6px; border-bottom: 1px dotted #ccc; }
+      .print-totals { width: 300px; margin-left: auto; margin-top: 15px; line-height: 1.6; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Módulo Evaluador y Operativo de Facturación</h2>
+  
+  <div class="search-panel">
+    <div class="form-group" style="flex: 1;">
+      <label>Buscar Factura Existente (Por Número)</label>
+      <input type="text" id="buscarNoFactura" placeholder="Ej: FC01">
+    </div>
+    <button class="btn btn-primary" onclick="buscarFactura()">Buscar</button>
+    <button class="btn btn-print" id="btnImprimirTop" onclick="imprimirFacturaForm()" style="display:none;">🖨️ Imprimir Factura</button>
+    <button class="btn btn-danger" id="btnEliminar" onclick="eliminarFactura()" style="display:none;">Eliminar</button>
+  </div>
+
+  <form id="invoiceForm" onsubmit="event.preventDefault();">
+    <div class="grid-3">
+      <div class="form-group">
+        <label>No. Factura</label>
+        <input type="text" id="noFactura" readonly required onchange="calcularIdUnico()">
+      </div>
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="fecha" required>
+      </div>
+      <div class="form-group">
+        <label>ID Único (Autogenerado)</label>
+        <input type="text" id="idUnico" readonly>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <div class="form-group">
+        <label>NIT Cliente</label>
+        <input type="text" id="nit" required onblur="buscarClientePorNit()">
+      </div>
+      <div class="form-group">
+        <label>Razón Social</label>
+        <input type="text" id="razonSocial" required>
+      </div>
+      <div class="form-group">
+        <label>Dirección</label>
+        <input type="text" id="direccion" required>
+      </div>
+      <div class="form-group">
+        <label>Teléfono Cliente</label>
+        <input type="text" id="telefono">
+      </div>
+      <div class="form-group">
+        <label>Correo Electrónico</label>
+        <input type="email" id="correo">
+      </div>
+    </div>
+
+    <h3>Detalle de Conceptos / Productos</h3>
+    <!-- Lista compartida para autocompletar la descripción, pero el campo sigue siendo de texto libre -->
+    <datalist id="listaProductos"></datalist>
+
+    <table id="itemsTable">
+      <thead>
+        <tr>
+          <th style="width: 30%;">Descripción</th>
+          <th style="width: 10%;">Cantidad</th>
+          <th style="width: 12%;">V. Unitario</th>
+          <th style="width: 12%;">Subtotal</th>
+          <th style="width: 9%;">% IVA</th>
+          <th style="width: 9%;">IVA</th>
+          <th style="width: 9%;">% IPO</th>
+          <th style="width: 9%;">IPO</th>
+        </tr>
+      </thead>
+      <tbody>
+        <script>
+          for(let i=1; i<=5; i++){
+            document.write(`
+              <tr class="item-row" data-index="${i}">
+                <td>
+                  <input type="text" class="item-desc" list="listaProductos"
+                         placeholder="Escriba o elija de la lista..."
+                         oninput="alSeleccionarProducto(${i})"
+                         onchange="alSeleccionarProducto(${i})"
+                         style="width:100%;">
+                </td>
+                <td><input type="number" class="item-cant" min="0" value="0" oninput="calcularFila(${i})" style="width:90%;"></td>
+                <td><input type="number" class="item-vunit" value="0" oninput="calcularFila(${i})" style="width:90%;"></td>
+                <td><input type="number" class="item-sub" value="0" readonly style="width:90%;"></td>
+                <td><input type="number" class="item-piva" min="0" max="100" value="0" oninput="calcularFila(${i})" style="width:90%;"></td>
+                <td><input type="number" class="item-viva" value="0" readonly style="width:90%;"></td>
+                <td><input type="number" class="item-pipo" min="0" max="100" value="0" oninput="calcularFila(${i})" style="width:90%;"></td>
+                <td><input type="number" class="item-vipo" value="0" readonly style="width:90%;"></td>
+              </tr>
+            `);
+          }
+        </script>
+      </tbody>
+    </table>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap:20px;">
+      <div style="flex:1; display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+        <div class="form-group">
+          <label>Cuenta PUC (Código)</label>
+          <select id="cuentaPuc" required><option value="">-- Seleccione --</option></select>
+        </div>
+        <div class="form-group">
+          <label>¿Venta a Crédito?</label>
+          <select id="credito" onchange="alternarCredito()"><option value="NO">NO</option><option value="SI">SI</option></select>
+        </div>
+        <div class="form-group credito-field" style="display:none;">
+          <label>Días de Crédito</label>
+          <input type="number" id="diasCredito" value="0">
+        </div>
+        <div class="form-group credito-field" style="display:none;">
+          <label>% Interés Financiación</label>
+          <input type="number" id="porcInteres" step="0.01" value="0" oninput="calcularTotales()">
+        </div>
+      </div>
+
+      <div class="totals-box">
+        <div class="totals-row"><span>Subtotal General:</span><span id="lblSubtotal">$0.00</span></div>
+        <div class="totals-row"><label>Otros Cobros</label><input type="number" id="otrosCobros" value="0" oninput="calcularTotales()" style="width:120px; text-align:right;"></div>
+        <div class="totals-row"><label>Descuento</label><input type="number" id="descuento" value="0" oninput="calcularTotales()" style="width:120px; text-align:right;"></div>
+        <div class="totals-row"><span>Total IVA:</span><span id="lblTotalIva">$0.00</span></div>
+        <div class="totals-row"><span>Total IPOCONSUMO:</span><span id="lblTotalIpo">$0.00</span></div>
+        <div class="totals-row credito-field" style="display:none;"><span>Valor Interés:</span><span id="lblValorInteres">$0.00</span></div>
+        <div class="totals-row grand-total"><span>TOTAL FACTURA:</span><span id="lblTotal">$0.00</span></div>
+      </div>
+    </div>
+
+    <div class="footer-ctrls">
+      <button type="button" class="btn" onclick="limpiarFormulario()">Limpiar Formulario</button>
+      <button type="button" id="btnGuardar" class="btn btn-accent" onclick="procesarFormulario()">Registrar Factura</button>
+    </div>
+  </form>
+</div>
+
+<div class="surtecol-footer">
+    <p style="font-size: 16px;">
+        Este es un desarrollo creado por <strong style="text-decoration: underline;">Surtecol</strong>
+    </p>
+    <p style="font-size: 15px; font-weight: bold;">
+        Tel.: +573188097131 &nbsp;&nbsp;|&nbsp;&nbsp; email: surtecol@gmail.com &nbsp;&nbsp;|&nbsp;&nbsp; Colombia
+    </p>
+    <div class="surtecol-logo-container">
+        <img src="logo1.png?v=2" alt="Logo Surtecol" onerror="this.src='logo1.PNG?v=2'" />
+    </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpYG9qByjvcK06ShRLpS9QnLEvQyYnO4OmeilNl6JGT1-U24P27gGRtgKgtPjT0hKv/exec"; 
+  
+  let dbInventario = {}, dbPrecios = {}, datosEmpresa = {};
+  let modoEdicion = false;
+  let siguienteFacturaGlobal = "FC001";
+
+  window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('fecha').valueAsDate = new Date();
+    cargarDatosIniciales();
+  });
+
+  function cargarDatosIniciales() {
+    fetch(`${WEB_APP_URL}?action=getFormInitData`)
+      .then(res => res.json())
+      .then(res => {
+        if(res.success){
+          dbInventario = res.data.inventario;
+          dbPrecios = res.data.precios;
+          datosEmpresa = res.data.empresa; 
+          siguienteFacturaGlobal = res.data.siguienteFactura; 
+
+          if (!modoEdicion) {
+            document.getElementById('noFactura').value = siguienteFacturaGlobal;
+            calcularIdUnico();
+          }
+          
+          const productosUnicos = [...new Set(Object.keys(dbInventario))];
+
+          // Se llena una única <datalist> compartida por todas las filas.
+          // Los campos de descripción son <input> de texto libre: el usuario
+          // puede escoger una opción de la lista (autocompleta precio/stock)
+          // o digitar cualquier descripción distinta manualmente.
+          const datalist = document.getElementById('listaProductos');
+          datalist.innerHTML = '';
+          productosUnicos.forEach(prod => {
+            if (prod && prod.trim() !== "") {
+              let opt = document.createElement('option');
+              opt.value = prod;
+              datalist.appendChild(opt);
+            }
+          });
+
+          const pucSelect = document.getElementById('cuentaPuc');
+          pucSelect.innerHTML = '<option value="">-- Seleccione --</option>';
+          res.data.puc.forEach(cod => {
+            let opt = document.createElement('option');
+            opt.value = cod; opt.textContent = cod;
+            pucSelect.appendChild(opt);
+          });
+        }
+      }).catch(err => alert("Error conectando con Google Sheets: " + err));
+  }
+
+  function calcularIdUnico() {
+    const noFact = document.getElementById('noFactura').value;
+    const nit = document.getElementById('nit').value;
+    document.getElementById('idUnico').value = (noFact && nit) ? `${noFact}_${nit}` : '';
+  }
+
+  function buscarClientePorNit() {
+    const nit = document.getElementById('nit').value;
+    if(!nit) return;
+    calcularIdUnico();
+    
+    fetch(`${WEB_APP_URL}?action=buscarCliente&nit=${nit}`)
+      .then(res => res.json())
+      .then(res => {
+        if(res.success && res.data){
+          document.getElementById('razonSocial').value = res.data.razonSocial;
+          document.getElementById('direccion').value = res.data.direccion;
+          document.getElementById('telefono').value = res.data.telefono || '';
+          document.getElementById('correo').value = res.data.correo || '';
+        }
+      });
+  }
+
+  function alSeleccionarProducto(index) {
+    const fila = document.querySelector(`.item-row[data-index="${index}"]`);
+    const desc = fila.querySelector('.item-desc').value;
+    // Si la descripción coincide EXACTAMENTE con un producto conocido de la
+    // hoja de cálculo, autocompleta su valor unitario. Si el usuario digita
+    // una descripción libre (que no existe en la base), el valor unitario
+    // no se toca y queda disponible para digitarlo manualmente.
+    if (Object.prototype.hasOwnProperty.call(dbPrecios, desc)) {
+      fila.querySelector('.item-vunit').value = dbPrecios[desc];
+    }
+    calcularFila(index);
+  }
+
+  function calcularFila(index) {
+    const fila = document.querySelector(`.item-row[data-index="${index}"]`);
+    const desc = fila.querySelector('.item-desc').value;
+    const cant = parseFloat(fila.querySelector('.item-cant').value) || 0;
+    const vunit = parseFloat(fila.querySelector('.item-vunit').value) || 0;
+    
+    // La validación de stock solo aplica cuando la descripción corresponde
+    // a un producto real del inventario. Las descripciones libres (que no
+    // están en dbInventario) no se validan contra existencias.
+    if(desc && cant > 0 && !modoEdicion && Object.prototype.hasOwnProperty.call(dbInventario, desc)){
+      const disponible = dbInventario[desc] || 0;
+      if(cant > disponible){
+        alert(`Stock insuficiente para "${desc}". Disponible: ${disponible}`);
+        fila.querySelector('.item-cant').value = 0;
+        return calcularFila(index);
+      }
+    }
+
+    const sub = cant * vunit;
+    fila.querySelector('.item-sub').value = sub.toFixed(2);
+    
+    const pIva = parseFloat(fila.querySelector('.item-piva').value) || 0;
+    fila.querySelector('.item-viva').value = (sub * (pIva / 100)).toFixed(2);
+    
+    const pIpo = parseFloat(fila.querySelector('.item-pipo').value) || 0;
+    fila.querySelector('.item-vipo').value = (sub * (pIpo / 100)).toFixed(2);
+
+    calcularTotales();
+  }
+
+  function alternarCredito() {
+    const esCredito = document.getElementById('credito').value === 'SI';
+    document.querySelectorAll('.credito-field').forEach(el => el.style.display = esCredito ? 'flex' : 'none');
+    calcularTotales();
+  }
+
+  function calcularTotales() {
+    let subtotalG = 0, totalIva = 0, totalIpo = 0;
+    document.querySelectorAll('.item-row').forEach(fila => {
+      subtotalG += parseFloat(fila.querySelector('.item-sub').value) || 0;
+      totalIva += parseFloat(fila.querySelector('.item-viva').value) || 0;
+      totalIpo += parseFloat(fila.querySelector('.item-vipo').value) || 0;
+    });
+
+    const otros = parseFloat(document.getElementById('otrosCobros').value) || 0;
+    const desc = parseFloat(document.getElementById('descuento').value) || 0;
+    const pInteres = parseFloat(document.getElementById('porcInteres').value) || 0;
+    const vInteres = subtotalG * (pInteres / 100);
+    
+    document.getElementById('lblSubtotal').textContent = `$${subtotalG.toFixed(2)}`;
+    document.getElementById('lblTotalIva').textContent = `$${totalIva.toFixed(2)}`;
+    document.getElementById('lblTotalIpo').textContent = `$${totalIpo.toFixed(2)}`;
+    document.getElementById('lblValorInteres').textContent = `$${vInteres.toFixed(2)}`;
+
+    const totalFactura = subtotalG + otros - desc + totalIva + totalIpo;
+    document.getElementById('lblTotal').textContent = `$${totalFactura.toFixed(2)}`;
+  }
+
+  function extraerDatosFormulario() {
+    let factura = {
+      idUnico: document.getElementById('idUnico').value,
+      fecha: document.getElementById('fecha').value,
+      noFactura: document.getElementById('noFactura').value,
+      razonSocial: document.getElementById('razonSocial').value,
+      nit: document.getElementById('nit').value,
+      direccion: document.getElementById('direccion').value,
+      telefono: document.getElementById('telefono').value,
+      correo: document.getElementById('correo').value,
+      items: [],
+      otrosCobros: parseFloat(document.getElementById('otrosCobros').value) || 0,
+      descuento: parseFloat(document.getElementById('descuento').value) || 0,
+      totalIva: parseFloat(document.getElementById('lblTotalIva').textContent.replace('$','')) || 0,
+      totalIpoconsumo: parseFloat(document.getElementById('lblTotalIpo').textContent.replace('$','')) || 0,
+      total: parseFloat(document.getElementById('lblTotal').textContent.replace('$','')) || 0,
+      credito: document.getElementById('credito').value,
+      diasCredito: parseInt(document.getElementById('diasCredito').value) || 0,
+      porcInteres: parseFloat(document.getElementById('porcInteres').value) || 0,
+      valorInteres: parseFloat(document.getElementById('lblValorInteres').textContent.replace('$','')) || 0,
+      cuentaPuc: document.getElementById('cuentaPuc').value
+    };
+
+    document.querySelectorAll('.item-row').forEach(fila => {
+      factura.items.push({
+        descripcion: fila.querySelector('.item-desc').value,
+        character: fila.querySelector('.item-desc').value,
+        cantidad: parseFloat(fila.querySelector('.item-cant').value) || 0,
+        valorUnitario: parseFloat(fila.querySelector('.item-vunit').value) || 0,
+        subtotal: parseFloat(fila.querySelector('.item-sub').value) || 0,
+        porcIva: parseFloat(fila.querySelector('.item-piva').value) || 0,
+        iva: parseFloat(fila.querySelector('.item-viva').value) || 0,
+        porcIpo: parseFloat(fila.querySelector('.item-pipo').value) || 0,
+        ipo: parseFloat(fila.querySelector('.item-vipo').value) || 0
+      });
+    });
+    return factura;
+  }
+
+  function procesarFormulario() {
+    const fData = extraerDatosFormulario();
+    if(!fData.noFactura || !fData.nit || !fData.cuentaPuc){
+      alert("Por favor diligencie: Número Factura, NIT y Cuenta PUC.");
+      return;
+    }
+
+    const payload = { action: modoEdicion ? 'editarFactura' : 'crearFactura', data: fData };
+
+    fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
+      .then(() => {
+        alert("Operación procesada con éxito.");
+        document.getElementById('btnImprimirTop').style.display = 'inline-block';
+        if(!modoEdicion) {
+          cargarDatosIniciales();
+        }
+      }).catch(err => alert("Error enviando datos: " + err));
+  }
+
+  function buscarFactura() {
+    const noFact = document.getElementById('buscarNoFactura').value;
+    if(!noFact) return alert("Inserte un número de factura.");
+
+    fetch(`${WEB_APP_URL}?action=buscarFactura&noFactura=${noFact}`)
+      .then(res => res.json())
+      .then(res => {
+        if(res.success && res.data){
+          modoEdicion = true;
+          const f = res.data;
+          
+          document.getElementById('noFactura').value = f.noFactura;
+          document.getElementById('noFactura').readOnly = true; 
+          document.getElementById('fecha').value = f.fecha.split('T')[0];
+          document.getElementById('idUnico').value = f.idUnico;
+          document.getElementById('nit').value = f.nit;
+          document.getElementById('razonSocial').value = f.razonSocial;
+          document.getElementById('direccion').value = f.direccion;
+          document.getElementById('telefono').value = f.telefono || '';
+          document.getElementById('correo').value = f.correo || '';
+          
+          for(let i=0; i<5; i++){
+            const fila = document.querySelector(`.item-row[data-index="${i+1}"]`);
+            const it = f.items[i];
+            if(it){
+              fila.querySelector('.item-desc').value = it.descripcion;
+              fila.querySelector('.item-cant').value = it.cantidad;
+              fila.querySelector('.item-vunit').value = it.valorUnitario;
+              fila.querySelector('.item-sub').value = it.subtotal;
+              fila.querySelector('.item-piva').value = it.porcIva;
+              fila.querySelector('.item-viva').value = it.iva;
+              fila.querySelector('.item-pipo').value = it.porcIpo;
+              fila.querySelector('.item-vipo').value = it.ipo;
+            } else {
+              fila.querySelector('.item-desc').value = "";
+              fila.querySelector('.item-cant').value = 0;
+              fila.querySelector('.item-vunit').value = 0;
+              fila.querySelector('.item-sub').value = 0;
+              fila.querySelector('.item-piva').value = 0;
+              fila.querySelector('.item-viva').value = 0;
+              fila.querySelector('.item-pipo').value = 0;
+              fila.querySelector('.item-vipo').value = 0;
+            }
+          }
+
+          document.getElementById('cuentaPuc').value = f.cuentaPuc;
+          document.getElementById('credito').value = f.credito;
+          document.getElementById('diasCredito').value = f.diasCredito;
+          document.getElementById('porcInteres').value = f.porcInteres;
+          document.getElementById('otrosCobros').value = f.otrosCobros;
+          document.getElementById('descuento').value = f.descuento;
+
+          alternarCredito();
+          document.getElementById('btnEliminar').style.display = 'inline-block';
+          document.getElementById('btnImprimirTop').style.display = 'inline-block';
+          document.getElementById('btnGuardar').textContent = "Actualizar Factura";
+        } else {
+          alert("Factura no encontrada.");
+        }
+      });
+  }
+
+  function imprimirFacturaForm() {
+    const f = extraerDatosFormulario();
+    const printArea = document.getElementById('printArea');
+    
+    let filasHtml = '';
+    let subtotalGeneralCalculado = 0;
+    f.items.forEach(it => {
+      if(it.descripcion && it.cantidad > 0){
+        subtotalGeneralCalculado += it.subtotal;
+        filasHtml += `
+          <tr>
+            <td>${it.descripcion}</td>
+            <td style="text-align: center;">${it.cantidad}</td>
+            <td style="text-align: right;">$${it.valorUnitario.toFixed(2)}</td>
+            <td style="text-align: right;">$${it.subtotal.toFixed(2)}</td>
+          </tr>
+        `;
+      }
+    });
+
+    printArea.innerHTML = `
+      <div class="print-header">
+        <div>
+          <strong style="font-size: 18px;">${datosEmpresa.nombre || 'EMPRESA'}</strong><br>
+          NIT: ${datosEmpresa.nit || ''}<br>
+          Dirección: ${datosEmpresa.direccion || ''}<br>
+          Tel: ${datosEmpresa.telefono1 || ''} ${datosEmpresa.telefono2 || ''}<br>
+          Email: ${datosEmpresa.correo || ''}
+        </div>
+        <div style="text-align: right;">
+          <strong style="font-size: 16px; color: #000;">FACTURA DE VENTA</strong><br>
+          <span style="font-size: 18px; font-weight: bold;">No. ${f.noFactura}</span><br>
+          Fecha: ${f.fecha}<br>
+          Condición: ${f.credito === 'SI' ? `CRÉDITO (${f.diasCredito} Días)` : 'CONTADO'}
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px; border: 1px solid #000; padding: 10px;">
+        <strong>ADQUIRIENTE (CLIENTE)</strong><br>
+        RAZÓN SOCIAL: ${f.razonSocial}<br>
+        NIT/CÉDULA: ${f.nit}<br>
+        DIRECCIÓN: ${f.direccion}<br>
+        TELÉFONO: ${f.telefono || 'N/A'} | EMAIL: ${f.correo || 'N/A'}
+      </div>
+
+      <table class="print-table">
+        <thead>
+          <tr>
+            <th>Descripción del Concepto</th>
+            <th style="text-align: center; width: 10%;">Cant.</th>
+            <th style="text-align: right; width: 15%;">V. Unitario</th>
+            <th style="text-align: right; width: 15%;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filasHtml}
+        </tbody>
+      </table>
+
+      <div class="print-totals">
+        <div style="display:flex; justify-content:space-between;"><span>Subtotal:</span><span>$${subtotalGeneralCalculado.toFixed(2)}</span></div>
+        ${f.otrosCobros > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Otros Cobros:</span><span>$${f.otrosCobros.toFixed(2)}</span></div>` : ''}
+        ${f.descuento > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Descuento:</span><span>-$${f.descuento.toFixed(2)}</span></div>` : ''}
+        ${f.totalIva > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Total IVA:</span><span>$${f.totalIva.toFixed(2)}</span></div>` : ''}
+        ${f.totalIpoconsumo > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Total Impoconsumo:</span><span>$${f.totalIpoconsumo.toFixed(2)}</span></div>` : ''}
+        ${f.valorInteres > 0 ? `<div style="display:flex; justify-content:space-between;"><span>Intereses Financiación:</span><span>$${f.valorInteres.toFixed(2)}</span></div>` : ''}
+        <div style="display:flex; justify-content:space-between; font-weight:bold; border-top: 1px solid #000; padding-top:4px; font-size:15px;">
+          <span>TOTAL NETO:</span><span>$${f.total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 50px; text-align: center; font-size: 11px;">
+        <p>Cuenta Contable PUC afectada: ${f.cuentaPuc}</p>
+        <p>Factura generada desde el Sistema Integrado Contable en GitHub.</p>
+      </div>
+    `;
+
+    window.print();
+  }
+
+  function eliminarFactura() {
+    const noFact = document.getElementById('noFactura').value;
+    if(!confirm(`¿Desea eliminar la factura No. ${noFact}?`)) return;
+    fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'eliminarFactura', noFactura: noFact }) })
+      .then(() => { 
+        alert("Registro eliminado."); 
+        modoEdicion = false;
+        cargarDatosIniciales();
+        limpiarFormulario(); 
+      });
+  }
+
+  function limpiarFormulario() {
+    modoEdicion = false;
+    document.getElementById('invoiceForm').reset();
+    
+    document.getElementById('noFactura').readOnly = true; 
+    document.getElementById('noFactura').value = siguienteFacturaGlobal;
+    
+    document.getElementById('fecha').valueAsDate = new Date();
+    document.getElementById('btnEliminar').style.display = 'none';
+    document.getElementById('btnImprimirTop').style.display = 'none';
+    document.getElementById('btnGuardar').textContent = "Registrar Factura";
+    
+    document.querySelectorAll('.item-row').forEach(f => {
+      f.querySelector('.item-sub').value = 0;
+      f.querySelector('.item-viva').value = 0;
+      f.querySelector('.item-vipo').value = 0;
+    });
+    
+    alternarCredito();
+    calcularIdUnico(); 
+    calcularTotales();
+  }
+</script>
+</body>
+</html>
