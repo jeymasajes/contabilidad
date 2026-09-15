@@ -227,7 +227,7 @@
   });
 
   function cargarDatosIniciales() {
-    fetch(`${WEB_APP_URL}?action=getFormInitData`)
+    fetch(`${WEB_APP_URL}?action=getFormInitData&_=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(res => {
         if(res.success){
