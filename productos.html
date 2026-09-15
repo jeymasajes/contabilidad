@@ -189,9 +189,10 @@
     return `${dia}/${mes}/${anio}`;
   }
  
-  // Obtener y listar los productos desde Google Sheets
-  function cargarProductosExis() {
-    fetch(`${WEB_APP_URL}?action=getSoloProductos`)
+  // Obtener y listar los productos desde Google Sheets (con reintento automático
+  // ante el 404 intermitente de la redirección temporal de Google)
+  function cargarProductosExis(intento = 1) {
+    fetch(`${WEB_APP_URL}?action=getSoloProductos&_=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(res => {
         if (res.success) {
@@ -214,10 +215,17 @@
         } else {
           alert("Error cargando productos: " + res.error);
         }
-      }).catch(err => console.error("Error cargando productos:", err));
+      }).catch(err => {
+        if (intento < 3) {
+          setTimeout(() => cargarProductosExis(intento + 1), 700 * intento);
+        } else {
+          console.error("Error cargando productos:", err);
+        }
+      });
   }
  
   // Enviar nuevo producto mediante POST con validación de ID_UNICO
+  // (con reintento automático ante el 404 intermitente de la redirección de Google)
   document.getElementById("productoForm").addEventListener("submit", function(e) {
     e.preventDefault();
     
@@ -249,33 +257,41 @@
         // Nota: La fórmula matemática de la columna F (TOTAL) se procesa dinámicamente en el backend (Apps Script)
       }
     };
- 
-    fetch(WEB_APP_URL, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(res => {
-      if (res.success) {
-        alert(res.result);
-        document.getElementById("productoForm").reset();
-        cargarProductosExis(); 
-        
-        if (window.opener && !window.opener.closed) {
-          window.opener.postMessage("refreshProductos", "*");
+
+    function intentarGuardar(intento) {
+      fetch(WEB_APP_URL, {
+        method: "POST",
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          alert(res.result);
+          document.getElementById("productoForm").reset();
+          cargarProductosExis(); 
+          
+          if (window.opener && !window.opener.closed) {
+            window.opener.postMessage("refreshProductos", "*");
+          }
+        } else {
+          alert("Error: " + res.error);
         }
-      } else {
-        alert("Error: " + res.error);
-      }
-    })
-    .catch(err => {
-      console.error(err);
-      alert("Error de red al procesar el ítem.");
-    })
-    .finally(() => {
-      btn.disabled = false;
-      btn.textContent = "Agregar Ítem";
-    });
+      })
+      .catch(err => {
+        if (intento < 3) {
+          setTimeout(() => intentarGuardar(intento + 1), 700 * intento);
+          return;
+        }
+        console.error(err);
+        alert("Error de red al procesar el ítem.");
+      })
+      .finally(() => {
+        btn.disabled = false;
+        btn.textContent = "Agregar Ítem";
+      });
+    }
+
+    intentarGuardar(1);
   });
  
   // Buscador interactivo en la tabla
