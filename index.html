@@ -279,7 +279,7 @@
     if(!nit) return;
     calcularIdUnico();
     
-    fetch(`${WEB_APP_URL}?action=buscarCliente&nit=${nit}`)
+fetch(`${WEB_APP_URL}?action=buscarCliente&nit=${nit}&_=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(res => {
         if(res.success && res.data){
@@ -424,7 +424,7 @@
     const noFact = document.getElementById('buscarNoFactura').value;
     if(!noFact) return alert("Inserte un número de factura.");
 
-    fetch(`${WEB_APP_URL}?action=buscarFactura&noFactura=${noFact}`)
+fetch(`${WEB_APP_URL}?action=buscarFactura&noFactura=${noFact}&_=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(res => {
         if(res.success && res.data){
