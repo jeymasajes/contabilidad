@@ -226,7 +226,7 @@
     cargarDatosIniciales();
   });
 
-  function cargarDatosIniciales() {
+  function cargarDatosIniciales(intento = 1) {
     fetch(`${WEB_APP_URL}?action=getFormInitData&_=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(res => {
@@ -265,7 +265,13 @@
             pucSelect.appendChild(opt);
           });
         }
-      }).catch(err => alert("Error conectando con Google Sheets: " + err));
+      }).catch(err => {
+        if (intento < 3) {
+          setTimeout(() => cargarDatosIniciales(intento + 1), 700 * intento);
+        } else {
+          alert("Error conectando con Google Sheets: " + err);
+        }
+      });
   }
 
   function calcularIdUnico() {
