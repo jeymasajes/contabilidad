@@ -307,6 +307,27 @@
   
   let baseProductos = [];
   let esModoEdicion = false;
+
+  // Envoltorio con reintento automático (hasta 3 intentos) y anti-caché,
+  // para tolerar el 404 intermitente de la redirección temporal de Google.
+  function fetchConReintento(url, options = {}, intento = 1, maxIntentos = 3) {
+    const opts = Object.assign({}, options, { cache: 'no-store' });
+    return fetch(url, opts)
+      .then(res => res.json())
+      .catch(err => {
+        if (intento < maxIntentos) {
+          return new Promise(resolve => {
+            setTimeout(() => resolve(fetchConReintento(url, options, intento + 1, maxIntentos)), 700 * intento);
+          });
+        }
+        throw err;
+      });
+  }
+
+  function conCacheBust(url) {
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}_=${Date.now()}`;
+  }
  
   document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('fecha').valueAsDate = new Date();
@@ -314,8 +335,7 @@
   });
 
   function cargarListasIniciales() {
-    fetch(`${WEB_APP_URL}?action=getCompraInitData`)
-      .then(res => res.json())
+    fetchConReintento(conCacheBust(`${WEB_APP_URL}?action=getCompraInitData`))
       .then(res => {
         if (res.success) {
           const datalistPuc = document.getElementById("listaPuc");
@@ -446,8 +466,7 @@
 
   window.addEventListener("message", (event) => {
     if (event.data === "refreshProductos") {
-      fetch(`${WEB_APP_URL}?action=getCompraInitData`)
-        .then(res => res.json())
+      fetchConReintento(conCacheBust(`${WEB_APP_URL}?action=getCompraInitData`))
         .then(res => {
           if (res.success) {
             baseProductos = res.data.productos;
@@ -512,8 +531,7 @@
     const nitValue = document.getElementById("nit").value.trim();
     if (!nitValue || esModoEdicion) return;
 
-    fetch(`${WEB_APP_URL}?action=buscarProveedorPorNit&nit=${encodeURIComponent(nitValue)}`)
-      .then(res => res.json())
+    fetchConReintento(conCacheBust(`${WEB_APP_URL}?action=buscarProveedorPorNit&nit=${encodeURIComponent(nitValue)}`))
       .then(res => {
         if (res.success && res.data) {
           document.getElementById("razonSocial").value = res.data.razonSocial || "";
@@ -535,8 +553,7 @@
 
     document.getElementById("bodyItems").innerHTML = "<tr><td colspan='9' style='text-align:center;'>Buscando información...</td></tr>";
 
-    fetch(`${WEB_APP_URL}?action=buscarCompraFactura&noFactura=${encodeURIComponent(noFactura)}`)
-      .then(res => res.json())
+    fetchConReintento(conCacheBust(`${WEB_APP_URL}?action=buscarCompraFactura&noFactura=${encodeURIComponent(noFactura)}`))
       .then(res => {
         if (res.success && res.data) {
           const comp = res.data;
@@ -608,11 +625,10 @@
       noFactura: noFactura
     };
 
-    fetch(WEB_APP_URL, {
+    fetchConReintento(WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify(payload)
     })
-    .then(res => res.json())
     .then(res => {
       if (res.success) {
         alert(res.result);
@@ -720,11 +736,10 @@
       }
     };
  
-    fetch(WEB_APP_URL, {
+    fetchConReintento(WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify(payload)
     })
-    .then(res => res.json())
     .then(res => {
       if (res.success) {
         alert(res.result);
