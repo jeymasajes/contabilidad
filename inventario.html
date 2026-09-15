@@ -471,5 +471,27 @@
     document.getElementById("btnImprimirConteo").style.display = "inline-block";
   }
 </script>
+  <!-- Botón flotante: volver al Menú Principal -->
+<a href="menu.html" title="Volver al Menú Principal" style="
+  position: fixed;
+  bottom: 25px;
+  right: 25px;
+  width: 56px;
+  height: 56px;
+  background-color: #16a085;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  z-index: 9999;
+  transition: transform 0.2s, background-color 0.2s;
+" onmouseover="this.style.transform='scale(1.1)'; this.style.backgroundColor='#117a65';" onmouseout="this.style.transform='scale(1)'; this.style.backgroundColor='#16a085';">
+  🏠
+</a>
+
 </body>
 </html>
