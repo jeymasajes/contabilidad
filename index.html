@@ -279,7 +279,7 @@
     if(!nit) return;
     calcularIdUnico();
     
-fetch(`${WEB_APP_URL}?action=buscarCliente&nit=${nit}&_=${Date.now()}`, { cache: 'no-store' })
+    fetch(`${WEB_APP_URL}?action=buscarCliente&nit=${nit}&_=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(res => {
         if(res.success && res.data){
@@ -413,9 +413,11 @@ fetch(`${WEB_APP_URL}?action=buscarCliente&nit=${nit}&_=${Date.now()}`, { cache:
     fetch(WEB_APP_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) })
       .then(() => {
         alert("Operación procesada con éxito.");
-        document.getElementById('btnImprimirTop').style.display = 'inline-block';
         if(!modoEdicion) {
+          limpiarFormulario();
           cargarDatosIniciales();
+        } else {
+          document.getElementById('btnImprimirTop').style.display = 'inline-block';
         }
       }).catch(err => alert("Error enviando datos: " + err));
   }
@@ -424,7 +426,7 @@ fetch(`${WEB_APP_URL}?action=buscarCliente&nit=${nit}&_=${Date.now()}`, { cache:
     const noFact = document.getElementById('buscarNoFactura').value;
     if(!noFact) return alert("Inserte un número de factura.");
 
-fetch(`${WEB_APP_URL}?action=buscarFactura&noFactura=${noFact}&_=${Date.now()}`, { cache: 'no-store' })
+    fetch(`${WEB_APP_URL}?action=buscarFactura&noFactura=${noFact}&_=${Date.now()}`, { cache: 'no-store' })
       .then(res => res.json())
       .then(res => {
         if(res.success && res.data){
