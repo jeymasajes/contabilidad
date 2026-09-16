@@ -156,6 +156,26 @@
         'EGRESOS': 4
     };
 
+    // Reintento automático (hasta 3 intentos) y anti-caché, para tolerar
+    // el 404 intermitente de la redirección temporal de Google.
+    async function fetchConReintento(url, intento = 1, maxIntentos = 3) {
+        try {
+            const response = await fetch(url, { cache: 'no-store' });
+            return await response.json();
+        } catch (err) {
+            if (intento < maxIntentos) {
+                await new Promise(resolve => setTimeout(resolve, 700 * intento));
+                return fetchConReintento(url, intento + 1, maxIntentos);
+            }
+            throw err;
+        }
+    }
+
+    function conCacheBust(url) {
+        const sep = url.includes('?') ? '&' : '?';
+        return `${url}${sep}_=${Date.now()}`;
+    }
+
     async function procesarInforme() {
         const tipoReporte = document.getElementById('tipo_reporte').value;
         const fInicio = document.getElementById('fecha_inicio').value;
@@ -174,8 +194,7 @@
             if (fInicio) url += `&fechaInicio=${encodeURIComponent(fInicio)}`;
             if (fFin) url += `&fechaFin=${encodeURIComponent(fFin)}`;
 
-            const response = await fetch(url);
-            const res = await response.json();
+            const res = await fetchConReintento(conCacheBust(url));
 
             if (res && res.success) {
                 const cabeceras = res.data.cabeceras || [];
