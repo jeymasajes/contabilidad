@@ -271,14 +271,34 @@
 
   let inventarioCargado = [];
 
+  // Envoltorio con reintento automático (hasta 3 intentos) y anti-caché,
+  // para tolerar el 404 intermitente de la redirección temporal de Google.
+  function fetchConReintento(url, options = {}, intento = 1, maxIntentos = 3) {
+    const opts = Object.assign({}, options, { cache: 'no-store' });
+    return fetch(url, opts)
+      .then(res => res.json())
+      .catch(err => {
+        if (intento < maxIntentos) {
+          return new Promise(resolve => {
+            setTimeout(() => resolve(fetchConReintento(url, options, intento + 1, maxIntentos)), 700 * intento);
+          });
+        }
+        throw err;
+      });
+  }
+
+  function conCacheBust(url) {
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}_=${Date.now()}`;
+  }
+
   document.addEventListener("DOMContentLoaded", cargarInventario);
 
   function cargarInventario() {
     const tbody = document.getElementById("bodyInventario");
     tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#7f8c8d;">Cargando inventario...</td></tr>`;
 
-    fetch(`${WEB_APP_URL}?action=getInventarioConteo`)
-      .then(res => res.json())
+    fetchConReintento(conCacheBust(`${WEB_APP_URL}?action=getInventarioConteo`))
       .then(res => {
         if (res.success) {
           inventarioCargado = res.data || [];
@@ -350,14 +370,13 @@
     btn.disabled = true;
     btn.textContent = "Guardando...";
 
-    fetch(WEB_APP_URL, {
+    fetchConReintento(WEB_APP_URL, {
       method: "POST",
       body: JSON.stringify({
         action: "guardarConteoInventario",
         data: { items: items }
       })
     })
-    .then(res => res.json())
     .then(res => {
       if (res.success) {
         alert(res.result);
@@ -393,8 +412,7 @@
 
   function cargarListaConteos() {
     const select = document.getElementById("selectConteo");
-    fetch(`${WEB_APP_URL}?action=listarConteosInventario`)
-      .then(res => res.json())
+    fetchConReintento(conCacheBust(`${WEB_APP_URL}?action=listarConteosInventario`))
       .then(res => {
         select.innerHTML = "";
         if (res.success && res.data && res.data.length > 0) {
@@ -427,8 +445,7 @@
       return alert("Selecciona primero una fecha de conteo.");
     }
 
-    fetch(`${WEB_APP_URL}?action=consultarConteoInventario&columna=${encodeURIComponent(columna)}`)
-      .then(res => res.json())
+    fetchConReintento(conCacheBust(`${WEB_APP_URL}?action=consultarConteoInventario&columna=${encodeURIComponent(columna)}`))
       .then(res => {
         if (res.success) {
           renderizarConteo(res.data);
