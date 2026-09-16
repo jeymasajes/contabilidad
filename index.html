@@ -166,7 +166,8 @@
       <div style="flex:1; display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
         <div class="form-group">
           <label>Cuenta PUC (Código)</label>
-          <select id="cuentaPuc" required><option value="">-- Seleccione --</option></select>
+          <input type="text" id="cuentaPuc" list="listaPuc" placeholder="Escriba o elija de la lista..." required>
+          <datalist id="listaPuc"></datalist>
         </div>
         <div class="form-group">
           <label>¿Venta a Crédito?</label>
@@ -257,12 +258,12 @@
             }
           });
 
-          const pucSelect = document.getElementById('cuentaPuc');
-          pucSelect.innerHTML = '<option value="">-- Seleccione --</option>';
+          const datalistPuc = document.getElementById('listaPuc');
+          datalistPuc.innerHTML = '';
           res.data.puc.forEach(cod => {
             let opt = document.createElement('option');
-            opt.value = cod; opt.textContent = cod;
-            pucSelect.appendChild(opt);
+            opt.value = cod;
+            datalistPuc.appendChild(opt);
           });
         }
       }).catch(err => {
