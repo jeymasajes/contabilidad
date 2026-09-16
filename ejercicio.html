@@ -137,6 +137,26 @@
     // Mismo Web App que usan fcompra.html, productos.html e index.html
     const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzpYG9qByjvcK06ShRLpS9QnLEvQyYnO4OmeilNl6JGT1-U24P27gGRtgKgtPjT0hKv/exec";
 
+    // Reintento automático (hasta 3 intentos) y anti-caché, para tolerar
+    // el 404 intermitente de la redirección temporal de Google.
+    async function fetchConReintento(url, intento = 1, maxIntentos = 3) {
+        try {
+            const response = await fetch(url, { cache: 'no-store' });
+            return await response.json();
+        } catch (err) {
+            if (intento < maxIntentos) {
+                await new Promise(resolve => setTimeout(resolve, 700 * intento));
+                return fetchConReintento(url, intento + 1, maxIntentos);
+            }
+            throw err;
+        }
+    }
+
+    function conCacheBust(url) {
+        const sep = url.includes('?') ? '&' : '?';
+        return `${url}${sep}_=${Date.now()}`;
+    }
+
     async function calcularEjercicio() {
         const fInicio = document.getElementById('fecha_inicio').value;
         const fFin = document.getElementById('fecha_fin').value;
@@ -152,8 +172,7 @@
 
         try {
             const url = `${WEB_APP_URL}?action=calcularEjercicio&fechaInicio=${encodeURIComponent(fInicio)}&fechaFin=${encodeURIComponent(fFin)}`;
-            const response = await fetch(url);
-            const res = await response.json();
+            const res = await fetchConReintento(conCacheBust(url));
 
             if (res && res.success) {
                 const ingresos = Number(res.data.totalIngresos) || 0;
